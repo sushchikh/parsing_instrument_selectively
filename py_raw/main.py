@@ -148,10 +148,21 @@ def parsing_instrument(instr_url_list):
     writer.close()
 
 
-
+def parsing_likar(likar_url_list):
+    """
+    Получает список
+    Заходит на ссылку в этом списке
+    Находит количество страниц которые есть в этом разделе
+    Добавляет в список страниц эти номер добавочных страниц
+    Заходит на каждуй из этих страниц
+    Собирает массив имен, массив цен, массив ссылок
+    Пушит их в словарь, словарь в эксель
+    """
+    print(likar_urls_list)
 
 
 
 if __name__ == "__main__":
     instr_url_list, likar_urls_list = get_urls_from_excel()
-    parsing_instrument(instr_url_list)
+    # parsing_instrument(instr_url_list)
+    parsing_likar(likar_urls_list)
