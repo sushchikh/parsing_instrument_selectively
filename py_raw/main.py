@@ -67,6 +67,7 @@ def parsing_instrument(instr_url_list):
             big_html = requests.get(url)  # получаем доступ к урлу
             big_soup = bs(big_html.text, 'html.parser')  # парсим его
             if big_soup.select('#catalog-products__show-more'):  # если кнопка show-more есть на странице, грабим сожержимое
+                # TODO прописать что делать, если кнопки show-more нет на странице
                 print('нашел продолжение страницы')
                 extra_links = extra_links + (big_soup.select('#catalog-products__show-more')[0].attrs['data-urls'])
             for i in extra_links.split('"'):
@@ -79,42 +80,37 @@ def parsing_instrument(instr_url_list):
         request = session.get(url)  # коннектимся
         if request.status_code == 200:  # если удачно:
             raw_html = requests.get(url)
-            soup = bs(raw_html.text, 'html.parser')
-            names_list_raw = soup.select('.product-card__name')
-            prices_list_raw = soup.select('.product-card__price-value')
-            links_list_raw = soup.find_all('a', itemprop="name")
+            instr_soup = bs(raw_html.text, 'html.parser')
+            names_list_raw = instr_soup.select('.product-card__name')
+            prices_list_raw = instr_soup.select('.product-card__price-value')
+            links_list_raw = instr_soup.find_all('a', itemprop="name")
 
-            names_list_clear = []
-            prices_list_clear = []
-            links_list_clear = []
+            instr_names_list_clear = []
+            instr_prices_list_clear = []
+            instr_links_list_clear = []
 
             for i in names_list_raw:
-                names_list_clear.append(i.getText().strip())
+                instr_names_list_clear.append(i.getText().strip())
 
             for i in prices_list_raw:
-                prices_list_clear.append(price_cutter(i.getText().strip()))
+                instr_prices_list_clear.append(price_cutter(i.getText().strip()))
 
             for i in links_list_raw:
-                links_list_clear.append("https://kirov.instrument.ms" + i.attrs['href'])
+                instr_links_list_clear.append("https://kirov.instrument.ms" + i.attrs['href'])
 
-            for i in range(len(names_list_clear)):
-                instr_items_dict[names_list_clear[i]] = []
-                instr_items_dict[names_list_clear[i]].append(prices_list_clear[i])
-                instr_items_dict[names_list_clear[i]].append(links_list_clear[i])
-
-
+            for i in range(len(instr_names_list_clear)):
+                instr_items_dict[instr_names_list_clear[i]] = []
+                instr_items_dict[instr_names_list_clear[i]].append(instr_prices_list_clear[i])
+                instr_items_dict[instr_names_list_clear[i]].append(instr_links_list_clear[i])
         else:
             print('some trouble with ', url)
-
-    for key, value in instr_items_dict.items():
-        print(key, value)
 
     instr_items_df = pd.DataFrame.from_dict(instr_items_dict, orient='index')
     instr_items_df.reset_index(drop=False, inplace=True)
     writer = pd.ExcelWriter('./../xlsx/instrument.xls', engine='xlsxwriter')
     instr_items_df.to_excel(writer, sheet_name='main', index=False)
 
-
+# DECOR
     ########  ########  ######   #######  ########
     ##     ## ##       ##    ## ##     ## ##     ##
     ##     ## ##       ##       ##     ## ##     ##
@@ -158,9 +154,59 @@ def parsing_likar(likar_url_list):
     Собирает массив имен, массив цен, массив ссылок
     Пушит их в словарь, словарь в эксель
     """
-    print(likar_urls_list)
+    headers = {
+        'accpet': '*/*',
+        'user-agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.142 Safari/537.36'
+    }
+    likar_items_dict = {}
+    session = requests.Session()
+    likar_url_list_full = likar_url_list[::]
+    for url in likar_url_list:
+        request = session.get(url)
+        if request.status_code == 200:
+            raw_html = requests.get(url)  # получаем доступ к урлу
+            likar_soup = bs(raw_html.text, 'html.parser')  # парсим его
+            if likar_soup.select('.nums'):  # если див с номерами дополнительных страниц есть на странице
+                number_of_extra_pages = int(likar_soup.select('.nums a')[-1].text)
+                for i in range(2, number_of_extra_pages+1):
+                    likar_url_list_full.append(url + '?PAGEN_1=' + str(i))
+        else:
+            logger.error('some shit with url', url)
 
+    likar_names_list = []
+    likar_prices_list = []
+    likar_links_list = []
+    for url in likar_url_list_full:
+        request = session.get(url)
+        if request.status_code == 200:
+            raw_html = requests.get(url)
+            likar_soup = bs(raw_html.text, 'html.parser')
+            likar_names_list_raw = likar_soup.select('.item-title span')
+            # likar_prices_list_raw = likar_soup.select('.catalog_item .item_info .prices .price_value')
+            likar_prices_list_raw = likar_soup.find_all('div', class_='price_matrix_block')
+            likar_links_list_raw = likar_soup.select('.item-title a')
+        for i in likar_names_list_raw:
+            likar_names_list.append(i.getText().strip())
+        print('numbers of likar_names = ', len(likar_names_list))
 
+        for i in likar_prices_list_raw:
+            print(i)
+            # likar_prices_list.append(price_cutter(i.getText().strip()))
+            # print(price_cutter(i.getText().strip()))
+
+        print('numbers of likar_prices = ', len(likar_prices_list))
+
+        for i in likar_links_list_raw:
+            likar_links_list.append('https://instrument-orugie.ru' + i.attrs['href'])
+        print('numbers of likar_links = ', len(likar_links_list))
+
+    #     for i in range(len(likar_names_list)):
+    #         likar_items_dict[likar_names_list[i]] = []
+    #         likar_items_dict[likar_names_list[i]].append(likar_prices_list[i])
+    #         likar_items_dict[likar_names_list[i]].append(likar_links_list[i])
+    #
+    # for key, value in likar_items_dict.items():
+    #     print(key, value)
 
 if __name__ == "__main__":
     instr_url_list, likar_urls_list = get_urls_from_excel()
