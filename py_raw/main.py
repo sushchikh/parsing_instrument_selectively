@@ -182,31 +182,60 @@ def parsing_likar(likar_url_list):
             raw_html = requests.get(url)
             likar_soup = bs(raw_html.text, 'html.parser')
             likar_names_list_raw = likar_soup.select('.item-title span')
-            # likar_prices_list_raw = likar_soup.select('.catalog_item .item_info .prices .price_value')
-            likar_prices_list_raw = likar_soup.find_all('div', class_='price_matrix_block')
             likar_links_list_raw = likar_soup.select('.item-title a')
+
         for i in likar_names_list_raw:
             likar_names_list.append(i.getText().strip())
         print('numbers of likar_names = ', len(likar_names_list))
-
-        for i in likar_prices_list_raw:
-            print(i)
-            # likar_prices_list.append(price_cutter(i.getText().strip()))
-            # print(price_cutter(i.getText().strip()))
-
-        print('numbers of likar_prices = ', len(likar_prices_list))
 
         for i in likar_links_list_raw:
             likar_links_list.append('https://instrument-orugie.ru' + i.attrs['href'])
         print('numbers of likar_links = ', len(likar_links_list))
 
-    #     for i in range(len(likar_names_list)):
-    #         likar_items_dict[likar_names_list[i]] = []
-    #         likar_items_dict[likar_names_list[i]].append(likar_prices_list[i])
-    #         likar_items_dict[likar_names_list[i]].append(likar_links_list[i])
-    #
-    # for key, value in likar_items_dict.items():
-    #     print(key, value)
+        for i in range(len(likar_names_list)):
+            likar_items_dict[likar_names_list[i]] = []
+            likar_items_dict[likar_names_list[i]].append(likar_links_list[i])
+
+    for key, value in likar_items_dict.items():
+        print(key, value)
+
+    likar_items_df = pd.DataFrame.from_dict(likar_items_dict, orient='index')
+    likar_items_df.reset_index(drop=False, inplace=True)
+    writer = pd.ExcelWriter('./../xlsx/likar.xls', engine='xlsxwriter')
+    likar_items_df.to_excel(writer, sheet_name='main', index=False)
+
+# DECOR
+    ########  ########  ######   #######  ########
+    ##     ## ##       ##    ## ##     ## ##     ##
+    ##     ## ##       ##       ##     ## ##     ##
+    ##     ## ######   ##       ##     ## ########
+    ##     ## ##       ##       ##     ## ##   ##
+    ##     ## ##       ##    ## ##     ## ##    ##
+    ########  ########  ######   #######  ##     ##
+
+    workbook = writer.book
+
+    cell_format = workbook.add_format({
+        'bold': True,
+        'font_color': 'black',
+        'align': 'center',
+        'valign': 'center',
+        'bg_color': '#ecf0f1'
+    })
+
+    for sheet in ['main']:
+        worksheet = writer.sheets[sheet]
+        worksheet.set_column('A:A', 60)
+        worksheet.set_column('B:B', 20)
+        worksheet.write('A1', 'название', cell_format)
+        worksheet.write('B1', 'ссылка', cell_format)
+
+        worksheet.freeze_panes(1, 0)
+
+    writer.save()
+    writer.close()
+
+
 
 if __name__ == "__main__":
     instr_url_list, likar_urls_list = get_urls_from_excel()
