@@ -1,5 +1,5 @@
 import yaml
-import datetime
+# import datetime
 import requests
 import pandas as pd
 import logging.config
@@ -7,11 +7,15 @@ import logging.config
 from bs4 import BeautifulSoup as bs
 
 
-# чтение ymal-файла с настройками логирования, создание логгера
-with open('config.yaml', 'r') as f:
-    config = yaml.safe_load(f.read())
-    logging.config.dictConfig(config)
-logger = logging.getLogger(__name__)
+def create_logger():
+    """
+    read logger.config from file, create logger
+    """
+    with open('config.yaml', 'r') as f:
+        config = yaml.safe_load(f.read())
+        logging.config.dictConfig(config)
+    logger = logging.getLogger(__name__)
+    return logger
 
 
 def get_urls_from_excel():
@@ -23,23 +27,30 @@ def get_urls_from_excel():
     try:
         name = "./../urls/urls.xlsx"
         urls_list = pd.read_excel(name)
-        for i in range(len(urls_list['instr_urls'])):
+
+        for i in range(len(urls_list['instr_urls'])):  # iteration adding urls to list (for instrument)
             instr_urls_list.append(urls_list['instr_urls'][i])
-        for i in range(len(urls_list['likar_urls'])):
+
+        for i in range(len(urls_list['likar_urls'])):  # iteration adding urls to list (for likar)
             likar_urls_list.append(urls_list['likar_urls'][i])
 
         return instr_urls_list, likar_urls_list
+
     except FileExistsError:
-        logger.error('some shit')
+        logger.error('No such file:', name)
     except FileNotFoundError:
-        logger.error('нет файла')
+        logger.error('No such file:', name)
 
 
 def price_cutter(item):
-    '''убираем лишние пробелы и знак рубля из входящего текста, кроме запятых'''
+    """
+    clear price from non digit chars
+    input string
+    output int
+    """
     price = ''
     for i in item:
-        if i.isdigit() == True:# or (i == ','):
+        if i.isdigit() == True:
             price += i
         if i == ',':
             price += '.'
@@ -238,6 +249,7 @@ def parsing_likar(likar_url_list):
 
 
 if __name__ == "__main__":
+    logger = create_logger()
     instr_url_list, likar_urls_list = get_urls_from_excel()
     # parsing_instrument(instr_url_list)
     parsing_likar(likar_urls_list)
